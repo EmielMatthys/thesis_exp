@@ -50,3 +50,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+mbedtls-2.16.5/*
+!mbedtls-2.16.5/library/
+!mbedtls-2.16.5/include/
