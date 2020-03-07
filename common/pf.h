@@ -10,7 +10,7 @@
 #define GET_PFN(adrs) ((void*) (((uint64_t) adrs) & ~PFN_MASK))
 
 typedef void (*fault_handler_t)(void *page_base_adrs);
-void register_fault_handler(fault_handler_t cb);
+void register_fault_handler();
 
 
 #endif

@@ -1,11 +1,5 @@
-#define _GNU_SOURCE 1
-#include <debug.h>
 #include <pf.h>
-#include <cacheutils.h>
 #include <sys/mman.h>
-#include <sys/syscall.h>
-#include <sys/types.h>
-#include <stdbool.h>
 
 #define info(msg, ...)                                                  \
     do {                                                                \
@@ -33,8 +27,7 @@ extern int a;
 
 void fault_handler(void *base_adr)
 {
-  info("Page fault handler callback.");
-  ASSERT(!mprotect(&a, sizeof(a), PROT_READ | PROT_WRITE));
+//  info("Page fault handler callback.");
 
 }
 
@@ -42,17 +35,11 @@ void check_var();
 
 int main() {
 
-  register_fault_handler(fault_handler);
+  register_fault_handler();
 
-  int test = true;
-  check_var();
+//  check_var();
 
   ASSERT(!mprotect(&a, sizeof(a), PROT_NONE));
-  if(a){
-    a=0;
-  }
-  ASSERT(!mprotect(&a, sizeof(a), PROT_NONE));
-
   check_var();
 
   return 0;
@@ -66,6 +53,7 @@ void check_var()
   }
   else
   {
+    a = 5;
     info("Variable was considered false: a=%02X", a);
   }
 }

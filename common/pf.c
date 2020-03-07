@@ -4,12 +4,13 @@
 #include <signal.h>
 #include <string.h>
 #include <ucontext.h>
+#include <sys/mman.h>
 
 #define TF_BIT 8
 #define _BV(bit) (1 << (bit))
 #define ADD_MASK(var, bit) (var |= 0b1 << bit)
 
-fault_handler_t __fault_handler_cb = NULL;
+void* last_memaccess_addr;
 
 void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
 {
@@ -21,33 +22,47 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
   switch ( signo )
   {
     case SIGSEGV:
-      info("Caught page fault (base address=%p)", base_adrs);
-      long int err = uc->uc_mcontext.gregs[REG_ERR];
+    {
+      int err = uc->uc_mcontext.gregs[REG_ERR];
       int is_write = (err & 0x2);
-      //SIMULATIE HIER
-      uc->uc_mcontext.gregs[REG_EFL] |= _BV(TF_BIT); // Set Trap Flag for after memory access
+      last_memaccess_addr = base_adrs;
 
-      if (__fault_handler_cb)
-        __fault_handler_cb(base_adrs);
+      info("Caught page fault at base address=%p with IS_WRITE=%d", base_adrs, is_write ? 1 : 0);
+      /*TODO
+       * SIMULATION HERE:
+       *  1) READ has to be replaced by DECRYPT + READ
+       *  2) WRITE has to be replaced by ENCRYPT + WRITE
+       */
+      // Set Trap Flag for after memory access
+      uc->uc_mcontext.gregs[REG_EFL] |= _BV(TF_BIT);
+
+      // Restore access permissions
+      ASSERT(!mprotect(base_adrs, 4096, PROT_READ | PROT_WRITE));
+
       break;
-    case SIGTRAP: // memory access concluded, remove trap flag and continue
-      info("SIGTRAP CAUGHT");
+    }
+
+    case SIGTRAP:
+    {
+      info("Caught SIGTRAP (address=%p), revoking access permissions.", base_adrs);
+
+      // Remove Trap Flag
       uc->uc_mcontext.gregs[REG_EFL] &= ~_BV(8);
+
+      // Revoke permissions for last memory access to catch SIGSEGV again
+      ASSERT(!mprotect(last_memaccess_addr, 4096, PROT_NONE));
       break;
+    }
+
 
     default:
       info("Caught unknown signal '%d'", signo);
       abort();
   }
 
-  /* Mask lower PFN bits to simulate clearing by SGX hardware when executing
-     the unprotected programs */
-//  base_adrs = GET_PFN(base_adrs);
-
-
 }
 
-void register_fault_handler(fault_handler_t cb)
+void register_fault_handler()
 {
   struct sigaction act, old_act;
   memset(&act, 0, sizeof(sigaction));
@@ -61,8 +76,5 @@ void register_fault_handler(fault_handler_t cb)
 
   ASSERT (!sigaction( SIGSEGV, &act, &old_act ));
   ASSERT(!sigaction(SIGTRAP, &act, &old_act));
-
-  __fault_handler_cb = cb;
-
 
 }
