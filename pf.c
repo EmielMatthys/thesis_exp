@@ -32,13 +32,13 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
 
       info("Caught page fault at base address=%p with IS_WRITE=%d", base_adrs, curr_info.is_write ? 1 : 0);
 
-      /*TODO
+      /*
        * SIMULATION STARTS HERE:
        *  1) If READ: decrypt the value before continuing the READ instruction
        *  2) If WRITE: do nothing yet; wait for Trap signal after MEM WRITE instruction executed
        */
 
-      if(!curr_info.is_write) // READ --> decrypt before continuing
+      if(!curr_info.is_write)
       {
         mbedtls_aes_crypt_xts(&xts, MBEDTLS_AES_DECRYPT, 4, (const unsigned char* ) &curr_info.base_addr, curr_info.base_addr, curr_info.base_addr);
       }
@@ -55,25 +55,27 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
     case SIGTRAP:
     {
       info("Caught SIGTRAP (address=%p), revoking access permissions.", base_adrs);
-      /*TODO
-       * SIMULATION ENDS HERE:
-       *  1) READ instruction finished, need to replace result with decrypted result
-       *  2) WRITE instruction finished, need to replace memory value with encrypted result
-       */
 
       // Remove Trap Flag
       uc->uc_mcontext.gregs[REG_EFL] &= ~_BV(TF_BIT);
 
       if(curr_info.status == STAT_INVALID)
       {
-        info("Current info status was invalid!");
-        break;
+        info("Current info status was invalid! Aborting...");
+        abort();
       }
 
-      if (curr_info.is_write) // WRITE --> encrypt after write (== after SIGTRAP)
+      /*
+       * SIMULATION ENDS HERE:
+       *  1) READ instruction finished with decrypted value, revoke access and continue
+       *  2) WRITE instruction finished, encrypt written result before continuing
+       */
+
+      if (curr_info.is_write)
       {
         mbedtls_aes_crypt_xts(&xts, MBEDTLS_AES_ENCRYPT, 4, (const unsigned char* ) &curr_info.base_addr, curr_info.base_addr, curr_info.base_addr);
       }
+
       // Revoke permissions for last memory access to catch SIGSEGV again
       ASSERT(!mprotect(curr_info.base_addr, 4096, PROT_NONE));
 
@@ -81,7 +83,6 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
       curr_info = INFO_INVAL;
       break;
     }
-
 
     default:
       info("Caught unknown signal '%d'", signo);
