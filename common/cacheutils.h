@@ -1,6 +1,8 @@
 #ifndef CACHE_UTILS_H_INC
 #define CACHE_UTILS_H_INC
 
+#include <stdint.h>
+
 /*
  * Code adapted from
  * https://github.com/IAIK/flush_flush/blob/master/sc/cacheutils.h
