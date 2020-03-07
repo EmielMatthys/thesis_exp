@@ -1,20 +1,6 @@
-#include <pf.h>
+#include "pf.h"
 #include <sys/mman.h>
-
-#define info(msg, ...)                                                  \
-    do {                                                                \
-        printf("[" __FILE__ "] " msg "\n", ##__VA_ARGS__);              \
-        fflush(stdout);                                                 \
-    } while(0)
-
-#define ASSERT(cond)                                                    \
-    do {                                                                \
-        if (!(cond))                                                    \
-        {                                                               \
-            perror("[" __FILE__ "] assertion '" #cond "' failed");      \
-            abort();                                                    \
-        }                                                               \
-    } while(0)
+#include "common/debug.h"
 
 asm("    .data\n"
     "    .global a\n"
@@ -24,23 +10,17 @@ asm("    .data\n"
     "    .space 0x1000   /* 4KiB */");
 
 extern int a;
-
-void fault_handler(void *base_adr)
-{
-//  info("Page fault handler callback.");
-
-}
-
 void check_var();
 
 int main() {
 
+  a = 0; // No faults
+
   register_fault_handler();
+  ASSERT(!mprotect(&a, sizeof(a), PROT_NONE)); // Remove access
 
-//  check_var();
-
-  ASSERT(!mprotect(&a, sizeof(a), PROT_NONE));
-  check_var();
+  a = 5; // SEGFAULT: WRITE
+  check_var(); // SEGFAULTS
 
   return 0;
 }
@@ -53,7 +33,6 @@ void check_var()
   }
   else
   {
-    a = 5;
     info("Variable was considered false: a=%02X", a);
   }
 }
