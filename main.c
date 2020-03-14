@@ -10,7 +10,7 @@
 //    "    .word 0x0\n"
 //    "    .space 0x1000   /* 4KiB */");
 
-void* a;
+void* a, *b, *c;
 void check_var();
 
 void attack_var(void* var)
@@ -19,8 +19,7 @@ void attack_var(void* var)
   ASSERT(!mprotect(var, 4096, PROT_WRITE | PROT_READ));
 
   // Cast to byte array and change random (here first) byte
-  char* cast = (char*) var;
-  cast[0] = 0x12;
+  ((char*) var)[0] = 0x12;
 
   // Revoke access again
   ASSERT(!mprotect(var, 4096, PROT_NONE)); // Revoke access again
@@ -28,18 +27,29 @@ void attack_var(void* var)
 
 int main() {
 
-  ASSERT(!posix_memalign(&a, 0x1000, 4));
+  ASSERT(!posix_memalign(&a, 0x1000, sizeof(int)));
+//  ASSERT(!posix_memalign(&b, 0x1000, sizeof(int)));
+//  ASSERT(!posix_memalign(&c, 0x1000, sizeof(int)));
+
+  b = malloc(100* sizeof(int));
+  c = malloc(100 * sizeof(int));
+
+  *(int*) a = 5;
+  *(int*) b = 6;
+  *(int*) c = 7;
 
   register_fault_handler();
   ASSERT(!mprotect(a, 4096, PROT_NONE)); // Remove access
 
-  *((int*) a) = 0;
+  *(int*) a = 0;
+  *(int*) b = 6;
+  *(int*) c = 7;
 
   check_var(); // var still false
 
-  attack_var(a);
+  attack_var(a); // change in encrypted byte array --> change in decrypted result
 
-  check_var();
+  check_var(); // var !=0 --> true
 
   return 0;
 }
