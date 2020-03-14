@@ -6,6 +6,7 @@
 #include <sys/mman.h>
 #include <aes.h>
 #include <malloc.h>
+#include "hex_dump.c"
 
 #define TF_BIT 8
 #define _BV(bit) (1 << (bit))
@@ -15,6 +16,8 @@ info_t curr_info;
 const char* key12 = "mLnmNmb3m0dTqYZij7rTgorUnuSXFAJaaa"; // KEY1 + KEY2
 
 //TODO: input size of crypto algo: min. 16 bytes; values to try: {16, 64, 4096} bytes?
+// TODO: dynamic input size using malloc_usable_size impossible? because metadata might be encrypted
+//  --> would need to keep metadata separate from encrypted block
 
 void crypt_xts(int mode)
 {
@@ -28,11 +31,20 @@ void crypt_xts(int mode)
 
   long long* data_unit = malloc(16);// has to be 16 bytes exactly --> shortcoming of mbed library?
   memset(data_unit, 0x11, 16);
-  *data_unit = curr_info.adr; // Set lower 8 bytes to address
+  *data_unit = (long long) curr_info.adr; // Set lower 8 bytes to address
 
-  info("Calling mbed crypt with data_unit=%016llX, input=%016llX", *data_unit, *((long long*)curr_info.adr));
-  mbedtls_aes_crypt_xts(&xts, mode, curr_info.var_size, (const unsigned char *) data_unit, curr_info.adr, curr_info.adr);
-  info("Crypto output is %016llX", *(long long*)(curr_info.adr));
+#ifdef EXP_DEBUG
+  hexDump("XTS BLOCK PRE", curr_info.adr, 16);
+#endif
+
+//  info("Calling mbed crypt with data_unit=%016llX, input=%016llX", *data_unit, *((long long*)curr_info.adr));
+  ASSERT(!mbedtls_aes_crypt_xts(&xts, mode, 16,
+          (const unsigned char *) data_unit, curr_info.adr, curr_info.adr));
+//  info("Crypto output is %016llX", *(long long*)(curr_info.adr));
+
+#ifdef EXP_DEBUG
+  hexDump("XTS BLOCK POST", curr_info.adr,16);
+#endif
 
   mbedtls_aes_xts_free(&xts);
 }
@@ -62,7 +74,7 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
        *  1) If READ: decrypt the value before continuing the READ instruction
        *  2) If WRITE: do nothing yet; wait for Trap signal after MEM WRITE instruction executed
        */
-      curr_info.var_size = malloc_usable_size(curr_info.adr); // get size, only works for malloc'ed vars!!! TODO
+      curr_info.var_size = malloc_usable_size(curr_info.adr); // get size, only works for malloc'ed vars!!!
       info("Size of accessed var: %lu", curr_info.var_size);
 
       if(!curr_info.is_write) // is read

@@ -34,6 +34,10 @@ do {                                                                            
     printf("--------------------------------------------------------------------------------\n\n"); \
 } while(0)
 
+#define _RED do{printf("\033[1;31m");}while(0);
+#define _GREEN do{printf("\033[1;32m");}while(0);
+#define _RESET_COL do{printf("\033[0m");}while(0);
+
 extern int enclave_rv;
 
 void dump_hex(char *str, uint8_t *buf, int len);

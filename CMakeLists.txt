@@ -3,7 +3,9 @@ project(thesis_exp2 C)
 
 set(CMAKE_C_STANDARD 99)
 
-set(SOURCES common/debug.c main.c pf.c common/cacheutils.h)
+set(SOURCES common/debug.c main.c pf.c common/cacheutils.h common/hex_dump.c)
+
+add_definitions(-DEXP_DEBUG)
 
 include_directories(
         mbedtls-2.16.5/include/mbedtls
