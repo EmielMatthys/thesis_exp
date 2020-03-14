@@ -1,25 +1,27 @@
 #include "pf.h"
 #include <sys/mman.h>
 #include "common/debug.h"
+#include <stdlib.h>
 
-asm("    .data\n"
-    "    .global a\n"
-    "    .align 0x1000   /* 4KiB */\n"
-    "a:\n"
-    "    .word 0x0\n"
-    "    .space 0x1000   /* 4KiB */");
+//asm("    .data\n"
+//    "    .global a\n"
+//    "    .align 0x1000   /* 4KiB */\n"
+//    "a:\n"
+//    "    .word 0x0\n"
+//    "    .space 0x1000   /* 4KiB */");
 
-extern int a;
+void* a;
 void check_var();
 
 int main() {
 
-  a = 0; // No faults
+  ASSERT(!posix_memalign(&a, 0x1000, 4));
 
   register_fault_handler();
-  ASSERT(!mprotect(&a, sizeof(a), PROT_NONE)); // Remove access
+  ASSERT(!mprotect(a, 4096, PROT_NONE)); // Remove access
 
-  a = 5; // SEGFAULT: WRITE
+  *((int*) a) = 0;
+
   check_var(); // SEGFAULTS
 
   return 0;
@@ -27,12 +29,15 @@ int main() {
 
 void check_var()
 {
-  if (a)
+  int control_var = *((int*) a); // SIGSEGV on read
+  if (control_var)
   {
-    info("Variable was considered true: a=%02X", a);
+    printf("\033[1;32m");
+    info("Variable was considered TRUE: a=%02X", control_var);
   }
   else
   {
-    info("Variable was considered false: a=%02X", a);
+    printf("\033[1;31m");
+    info("Variable was considered FALSE: a=%02X", control_var);
   }
 }
