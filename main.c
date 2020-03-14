@@ -13,6 +13,19 @@
 void* a;
 void check_var();
 
+void attack_var(void* var)
+{
+  // Grant read and write for attacked var
+  ASSERT(!mprotect(var, 4096, PROT_WRITE | PROT_READ));
+
+  // Cast to byte array and change random (here first) byte
+  char* cast = (char*) var;
+  cast[0] = 0x12;
+
+  // Revoke access again
+  ASSERT(!mprotect(var, 4096, PROT_NONE)); // Revoke access again
+}
+
 int main() {
 
   ASSERT(!posix_memalign(&a, 0x1000, 4));
@@ -22,7 +35,11 @@ int main() {
 
   *((int*) a) = 0;
 
-  check_var(); // SEGFAULTS
+  check_var(); // var still false
+
+  attack_var(a);
+
+  check_var();
 
   return 0;
 }
@@ -33,11 +50,12 @@ void check_var()
   if (control_var)
   {
     printf("\033[1;32m");
-    info("Variable was considered TRUE: a=%02X", control_var);
+    info("Variable was considered TRUE: a=%d", control_var);
   }
   else
   {
     printf("\033[1;31m");
-    info("Variable was considered FALSE: a=%02X", control_var);
+    info("Variable was considered FALSE: a=%d", control_var);
   }
+  printf("\033[0m");
 }
