@@ -28,9 +28,10 @@ void crypt_xts(int mode)
 
   long long* data_unit = malloc(16);// has to be 16 bytes exactly --> shortcoming of mbed library?
   memset(data_unit, 0x11, 16);
-//  data_unit = &curr_info.adr; // Set lower 8 bytes to address
+  *data_unit = curr_info.adr; // Set lower 8 bytes to address
+
   info("Calling mbed crypt with data_unit=%016llX, input=%016llX", *data_unit, *((long long*)curr_info.adr));
-  mbedtls_aes_crypt_xts(&xts, mode, 16, data_unit, curr_info.adr, curr_info.adr);
+  mbedtls_aes_crypt_xts(&xts, mode, 16, (const unsigned char *) data_unit, curr_info.adr, curr_info.adr);
   info("Crypto output is %016llX", *(long long*)(curr_info.adr));
 
   mbedtls_aes_xts_free(&xts);
