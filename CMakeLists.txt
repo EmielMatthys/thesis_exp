@@ -7,14 +7,10 @@ set(SOURCES common/debug.c main.c pf.c common/cacheutils.h)
 
 add_definitions(-DEXP_DEBUG)
 
-include_directories(
-        mbedtls-2.16.5/include/mbedtls
-        mbedtls-2.16.5/configs
-        common/
-)
+add_subdirectory(mbedtls)
 
-link_directories(
-        mbedtls-2.16.5/library/
+include_directories(
+        common/
 )
 
 add_executable(thesis_exp2 ${SOURCES})
