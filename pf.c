@@ -6,11 +6,11 @@
 #include <sys/mman.h>
 #include <aes.h>
 #include <malloc.h>
-#include "hex_dump.c"
 
-#define TF_BIT 8
-#define _BV(bit) (1 << (bit))
+#define TF_BIT 8u
+#define _BV(bit) (1u << (bit))
 #define ADD_MASK(var, bit) (var |= 0b1 << bit)
+#define CRYPTO_BLOCK_SIZE 64
 
 info_t curr_info;
 const char* key12 = "mLnmNmb3m0dTqYZij7rTgorUnuSXFAJaaa"; // KEY1 + KEY2
@@ -31,24 +31,26 @@ void crypt_xts(int mode)
 
   long long* data_unit = malloc(16);// has to be 16 bytes exactly --> shortcoming of mbed library?
   memset(data_unit, 0x11, 16);
-  *data_unit = (long long) curr_info.adr; // Set lower 8 bytes to address
 
-#ifdef EXP_DEBUG
-  hexDump("XTS BLOCK PRE", curr_info.adr, 16);
-#endif
+  unsigned long block_adr = (uint64_t) curr_info.adr & ~0x3f;
+
+  data_unit[0] = block_adr; // Set lower 8 bytes to address
 
 //  info("Calling mbed crypt with data_unit=%016llX, input=%016llX", *data_unit, *((long long*)curr_info.adr));
-  ASSERT(!mbedtls_aes_crypt_xts(&xts, mode, 16,
-          (const unsigned char *) data_unit, curr_info.adr, curr_info.adr));
+  ASSERT(!mbedtls_aes_crypt_xts(&xts, mode, CRYPTO_BLOCK_SIZE,
+          (const unsigned char *) data_unit, (unsigned char*) block_adr, (unsigned char*) block_adr));
 //  info("Crypto output is %016llX", *(long long*)(curr_info.adr));
 
 #ifdef EXP_DEBUG
-  hexDump("XTS BLOCK POST", curr_info.adr,16);
+  char title[128];
+  snprintf(title, 128, "%p - %s", (void *) block_adr, mode == MBEDTLS_AES_DECRYPT ? "DECRYPTED" : "ENCRYPTED");
+  hexDump(title, (void *) block_adr, CRYPTO_BLOCK_SIZE);
 #endif
 
   mbedtls_aes_xts_free(&xts);
 }
 
+int temp = 0;
 void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
 {
   void *adrs;
@@ -61,7 +63,7 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
     {
       curr_info.status = STAT_INITIALIZED;
       curr_info.adr = adrs;
-      curr_info.is_write = uc->uc_mcontext.gregs[REG_ERR] & 0x2; // StackOverflow
+      curr_info.is_write = uc->uc_mcontext.gregs[REG_ERR] & 0x2; // https://wiki.osdev.org/Paging#Handling
       curr_info.uc = uc;
 
       // Restore access permissions to continue execution
@@ -69,19 +71,11 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
 
       info("Caught SIGSEGV (address=%p) with IS_WRITE=%d", curr_info.adr, curr_info.is_write ? 1 : 0);
 
-      /*
-       * SIMULATION STARTS HERE:
-       *  1) If READ: decrypt the value before continuing the READ instruction
-       *  2) If WRITE: do nothing yet; wait for Trap signal after MEM WRITE instruction executed
-       */
-      curr_info.var_size = malloc_usable_size(curr_info.adr); // get size, only works for malloc'ed vars!!!
-      info("Size of accessed var: %lu", curr_info.var_size);
-
-      if(!curr_info.is_write) // is read
+      if(temp == 1) // TODO: replace by decent initialization procedure
       {
-        info("DECRYPTING...");
         crypt_xts(MBEDTLS_AES_DECRYPT);
       }
+      temp = 1;
 
       // Set Trap Flag for after memory access
       uc->uc_mcontext.gregs[REG_EFL] |= _BV(TF_BIT);
@@ -102,12 +96,6 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
         abort();
       }
 
-      /*
-       * SIMULATION ENDS HERE:
-       *  1) READ instruction finished with decrypted value, encrypt again
-       *  2) WRITE instruction finished, turn into decrypted version
-       */
-      info("ENCRYPTING...");
       crypt_xts(MBEDTLS_AES_ENCRYPT);
 
       // Revoke permissions for last memory access to catch SIGSEGV again

@@ -3,7 +3,7 @@ project(thesis_exp2 C)
 
 set(CMAKE_C_STANDARD 99)
 
-set(SOURCES common/debug.c main.c pf.c common/cacheutils.h common/hex_dump.c)
+set(SOURCES common/debug.c main.c pf.c common/cacheutils.h)
 
 add_definitions(-DEXP_DEBUG)
 
