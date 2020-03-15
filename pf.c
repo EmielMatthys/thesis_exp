@@ -4,7 +4,7 @@
 #include <signal.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <aes.h>
+#include <mbedtls/aes.h>
 #include <malloc.h>
 
 #define TF_BIT 8u
