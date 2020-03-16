@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(thesis_exp2 C)
+project(thesis_exp C)
 
 set(CMAKE_C_STANDARD 99)
 
@@ -13,6 +13,6 @@ include_directories(
         common/
 )
 
-add_executable(thesis_exp2 ${SOURCES})
+add_executable(thesis_exp ${SOURCES})
 
-target_link_libraries(thesis_exp2 PUBLIC mbedcrypto)
+target_link_libraries(thesis_exp PUBLIC mbedcrypto)

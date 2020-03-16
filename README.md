@@ -2,6 +2,28 @@ Check out pf.c and main.c
 
 Contents of `common/` folder were copied from `github.com/jovanbulck/sgx-tutorial-space18/` unless stated otherwise
 
+## Compiling
+Make sure the submodule is initialized/updated
+
+`git submodule update --init mbedtls`
+
+`git submodule update --init mbedtls/crypto`
+
+### CMake
+First create separate `build` dir within `thesis_exp` folder, then invoke cmake and make from there:
+
+`mkdir build && cd build`
+
+`cmake ..`
+
+`make thesis_exp`
+
+Then execute the thesis_exp target:
+
+`./thesis_exp`
+
+## Notes
+
 ### Var size ideas:
 
 - Keep static at 16, 64 or 4096 bytes
