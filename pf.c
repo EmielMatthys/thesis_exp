@@ -19,7 +19,7 @@ const char* key12 = "mLnmNmb3m0dTqYZij7rTgorUnuSXFAJaaa"; // KEY1 + KEY2
 // TODO: dynamic input size using malloc_usable_size impossible? because metadata might be encrypted
 //  --> would need to keep metadata separate from encrypted block
 
-void crypt_xts(int mode)
+void crypt_xts(int mode, void* var_adr)
 {
   mbedtls_aes_xts_context xts;
   mbedtls_aes_xts_init(&xts);
@@ -32,7 +32,7 @@ void crypt_xts(int mode)
   long long* data_unit = malloc(16);// has to be 16 bytes exactly --> shortcoming of mbed library?
   memset(data_unit, 0x11, 16);
 
-  unsigned long block_adr = (uint64_t) curr_info.adr & ~0x3f;
+  unsigned long block_adr = (uint64_t) var_adr & ~0x3f;
 
   data_unit[0] = block_adr; // Set lower 8 bytes to address
 
@@ -50,7 +50,17 @@ void crypt_xts(int mode)
   mbedtls_aes_xts_free(&xts);
 }
 
-int temp = 0;
+void init_mem_encr(void* base_adr, int block_count)
+{
+  int i = 0;
+  while (i < block_count)
+  {
+    void* block_adr = base_adr + i * CRYPTO_BLOCK_SIZE;
+    crypt_xts(MBEDTLS_AES_ENCRYPT, block_adr);
+    i++;
+  }
+}
+
 void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
 {
   void *adrs;
@@ -71,11 +81,7 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
 
       info("Caught SIGSEGV (address=%p) with IS_WRITE=%d", curr_info.adr, curr_info.is_write ? 1 : 0);
 
-      if(temp == 1) // TODO: replace by decent initialization procedure
-      {
-        crypt_xts(MBEDTLS_AES_DECRYPT);
-      }
-      temp = 1;
+      crypt_xts(MBEDTLS_AES_DECRYPT, curr_info.adr);
 
       // Set Trap Flag for after memory access
       uc->uc_mcontext.gregs[REG_EFL] |= _BV(TF_BIT);
@@ -96,7 +102,7 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
         abort();
       }
 
-      crypt_xts(MBEDTLS_AES_ENCRYPT);
+      crypt_xts(MBEDTLS_AES_ENCRYPT, curr_info.adr);
 
       // Revoke permissions for last memory access to catch SIGSEGV again
       ASSERT(!mprotect((uint64_t)curr_info.adr & ~0xfff, 4096, PROT_NONE));

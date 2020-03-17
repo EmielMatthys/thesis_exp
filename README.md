@@ -5,19 +5,21 @@ Contents of `common/` folder were copied from `github.com/jovanbulck/sgx-tutoria
 ## Compiling
 Make sure the submodule is initialized/updated
 
-`git submodule update --init mbedtls`
-
-`git submodule update --init mbedtls/crypto`
+```
+git submodule update --init mbedtls
+git submodule update --init mbedtls/crypto
+```
 
 ### CMake
 First create separate `build` dir within `thesis_exp` folder, then invoke cmake and make from there:
 
-`mkdir build && cd build`
+```
+mkdir build && cd build
 
-`cmake ..`
+cmake ..
 
-`make thesis_exp`
-
+make thesis_exp
+```
 Then execute the thesis_exp target:
 
 `./thesis_exp`

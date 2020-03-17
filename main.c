@@ -14,7 +14,7 @@ asm("    .data\n"
     "    .space 0x06   /* 4KiB */\n"
     "c:\n"
     "    .word 0x0\n"
-    "    .space 0x1000   /* 4KiB */");
+    "    .space 0x1000   /* 4KiB */\n");
 
 void check_var(void*);
 extern int a,b,c;
@@ -35,22 +35,19 @@ void attack_var(void* var)
   ASSERT(!mprotect(((uint64_t)var & ~0xfff), 4096, PROT_NONE)); // Revoke access again
 }
 
-int main() {
-
+int main()
+{
   a = 5;
-  b = 6;
-  c = 7;
+  b = 0x1122;
+  c = 6;
 
-  void *p = &a;
-  void *pb = &b;
-  void *pc = &c;
-
-  register_fault_handler();
+  init_mem_encr(&a, 4); // Encrypt given blocks
+  register_fault_handler(); // Hook SEGFAULT and TRAP handlers
   ASSERT(!mprotect(&a, 4096, PROT_NONE)); // Remove access
 
   a = 0;
-  b = 6;
-  c = 7;
+  b = 0x1122;
+  c = 6;
 
   check_var(&a); // var still false
 
