@@ -3,9 +3,9 @@ project(thesis_exp C)
 
 set(CMAKE_C_STANDARD 99)
 
-set(SOURCES common/debug.c main.c pf.c common/cacheutils.h)
+set(SOURCES common/debug.c main.c pf.c)
 
-add_definitions(-DEXP_DEBUG)
+#add_definitions(-DEXP_DEBUG)
 
 add_subdirectory(mbedtls)
 
