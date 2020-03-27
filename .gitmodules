@@ -1,3 +1,1 @@
-[submodule "tme_lib/mbedtls"]
-	path = tme_lib/mbedtls
-	url = https://github.com/ARMmbed/mbedtls
+
