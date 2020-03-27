@@ -10,7 +10,9 @@
 #define TF_BIT 8u
 #define _BV(bit) (1u << (bit))
 #define ADD_MASK(var, bit) (var |= 0b1 << bit)
-#define CRYPTO_BLOCK_SIZE 64
+#define CRYPTO_BLOCK_SIZE 4096
+#define CRYPTO_BLOCK_MASK ~(unsigned long long)(CRYPTO_BLOCK_SIZE - 1)
+#define CRYPTO_ADR_TO_BASE(adr) ((uint64_t)adr & CRYPTO_BLOCK_MASK)
 
 info_t curr_info;
 const char* key12 = "mLnmNmb3m0dTqYZij7rTgorUnuSXFAJaaa"; // KEY1 + KEY2
@@ -29,10 +31,10 @@ void crypt_xts(int mode, void* var_adr)
   else
     mbedtls_aes_xts_setkey_enc(&xts, key12, 256);
 
-  long long* data_unit = malloc(16);// has to be 16 bytes exactly --> shortcoming of mbed library?
+  unsigned long long* data_unit = malloc(16);// has to be 16 bytes exactly --> shortcoming of mbed library?
   memset(data_unit, 0x11, 16);
 
-  unsigned long block_adr = (uint64_t) var_adr & ~0x3f;
+  unsigned long long block_adr = CRYPTO_ADR_TO_BASE(var_adr);
 
   data_unit[0] = block_adr; // Set lower 8 bytes to address
 
@@ -55,7 +57,7 @@ void init_mem_encr(void* base_adr, int block_count)
   int i = 0;
   while (i < block_count)
   {
-    void* block_adr = base_adr + i * CRYPTO_BLOCK_SIZE;
+    void* block_adr = CRYPTO_ADR_TO_BASE(base_adr) + i * CRYPTO_BLOCK_SIZE;
     crypt_xts(MBEDTLS_AES_ENCRYPT, block_adr);
     i++;
   }
@@ -77,7 +79,7 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
       curr_info.uc = uc;
 
       // Restore access permissions to continue execution
-      ASSERT(!mprotect((uint64_t)curr_info.adr & ~0xfff, 4096, PROT_READ | PROT_WRITE ));
+      ASSERT(!mprotect(PAGE_BASEADR(curr_info.adr), 4096, PROT_READ | PROT_WRITE ));
 
       info("Caught SIGSEGV (address=%p) with IS_WRITE=%d", curr_info.adr, curr_info.is_write ? 1 : 0);
 
@@ -91,7 +93,7 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
 
     case SIGTRAP:
     {
-      info("Caught SIGTRAP (address=%p), revoking access permissions.", adrs);
+      info("Caught SIGTRAP (address=%p)", adrs);
 
       // Remove Trap Flag
       uc->uc_mcontext.gregs[REG_EFL] &= ~_BV(TF_BIT);
@@ -105,7 +107,7 @@ void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
       crypt_xts(MBEDTLS_AES_ENCRYPT, curr_info.adr);
 
       // Revoke permissions for last memory access to catch SIGSEGV again
-      ASSERT(!mprotect((uint64_t)curr_info.adr & ~0xfff, 4096, PROT_NONE));
+      ASSERT(!mprotect(PAGE_BASEADR(curr_info.adr), 4096, PROT_NONE));
 
       // Invalidate current info to avoid double processing
       curr_info = INFO_INVAL;

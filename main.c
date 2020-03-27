@@ -26,13 +26,13 @@ void attack_var(void* var)
   _RESET_COL
 
   // Grant read and write for attacked var
-  ASSERT(!mprotect(((uint64_t)var & ~0xfff), 4096, PROT_WRITE | PROT_READ));
+  ASSERT(!mprotect(PAGE_BASEADR(var), 4096, PROT_WRITE | PROT_READ));
 
   // Cast to byte array and change random (here first) byte
   ((char*) var)[0] = 0x12;
 
   // Revoke access again
-  ASSERT(!mprotect(((uint64_t)var & ~0xfff), 4096, PROT_NONE)); // Revoke access again
+  ASSERT(!mprotect(PAGE_BASEADR(var), 4096, PROT_NONE)); // Revoke access again
 }
 
 int main()
@@ -41,7 +41,7 @@ int main()
   b = 0x1122;
   c = 6;
 
-  init_mem_encr(&a, 4); // Encrypt given blocks
+  init_mem_encr(&a, 1); // Encrypt given blocks
   register_fault_handler(); // Hook SEGFAULT and TRAP handlers
   ASSERT(!mprotect(&a, 4096, PROT_NONE)); // Remove access
 
@@ -51,7 +51,7 @@ int main()
 
   check_var(&a); // var still false
 
-  attack_var(&b); // change in encrypted byte array --> change in decrypted result
+  attack_var(&a); // change in encrypted byte array --> change in decrypted result
 
   check_var(&a); // var !=0 --> true
 

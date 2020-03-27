@@ -1,5 +1,6 @@
 #ifndef PF_H_INC
 #define PF_H_INC
+#define PAGE_BASEADR(varadr) (void*)( (uint64_t)varadr & ~(unsigned long long)(4096 - 1) )
 
 #include <stdio.h>
 #include <stdlib.h>
