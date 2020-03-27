@@ -1,0 +1,1 @@
+add_executable(simple_attack main.c)
