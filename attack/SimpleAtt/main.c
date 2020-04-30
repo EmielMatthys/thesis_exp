@@ -41,8 +41,7 @@ int main()
     b = 0x1122;
     c = 6;
 
-    init_mem_encr(&a, 1); // Encrypt given blocks
-    register_fault_handler(); // Hook SEGFAULT and TRAP handlers
+    tem_init_mem_encr(&a, 1); // Encrypt given blocks
     ASSERT(!mprotect(&a, 4096, PROT_NONE)); // Remove access
 
     a = 0;

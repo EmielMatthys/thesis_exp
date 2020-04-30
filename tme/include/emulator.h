@@ -23,7 +23,6 @@ typedef struct info_s {
 
 static const info_t INFO_INVAL = {STAT_INVALID};
 
-void register_fault_handler();
-void init_mem_encr(void*, int);
+void tem_init_mem_encr(void*, int);
 
 #endif

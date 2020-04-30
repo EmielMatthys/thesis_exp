@@ -48,17 +48,6 @@ void crypt_xts(int mode, void* var_adr)
     mbedtls_aes_xts_free(&xts);
 }
 
-void init_mem_encr(void* base_adr, int block_count)
-{
-    int i = 0;
-    while (i < block_count)
-    {
-        void* block_adr = CRYPTO_ADR_TO_BASE(base_adr) + i * CRYPTO_BLOCK_SIZE;
-        crypt_xts(MBEDTLS_AES_ENCRYPT, block_adr);
-        i++;
-    }
-}
-
 void fault_handler_wrapper (int signo, siginfo_t * si, void  *ctx)
 {
     void *adrs;
@@ -131,4 +120,16 @@ void register_fault_handler()
 
     ASSERT (!sigaction( SIGSEGV, &act, &old_act ));
     ASSERT(!sigaction(SIGTRAP, &act, &old_act));
+}
+
+void tem_init_mem_encr(void* base_adr, int block_count)
+{
+    int i = 0;
+    while (i < block_count)
+    {
+        void* block_adr = CRYPTO_ADR_TO_BASE(base_adr) + i * CRYPTO_BLOCK_SIZE;
+        crypt_xts(MBEDTLS_AES_ENCRYPT, block_adr);
+        i++;
+    }
+    register_fault_handler();
 }

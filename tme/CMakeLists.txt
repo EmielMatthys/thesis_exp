@@ -1,6 +1,5 @@
 add_library(tmeemulator
         src/emulator.c
-        include/emulator.h
         )
 
 add_subdirectory(mbedtls)
