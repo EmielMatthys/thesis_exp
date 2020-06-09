@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 99)
 
 #set(SOURCES main.c)
 
-#add_definitions(-DEXP_DEBUG)
+add_definitions(-DEXP_DEBUG)
 
 add_subdirectory(tme)
 add_subdirectory(attack)

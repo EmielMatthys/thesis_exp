@@ -10,7 +10,7 @@
 #define TF_BIT 8u
 #define _BV(bit) (1u << (bit))
 #define ADD_MASK(var, bit) (var |= 0b1 << bit)
-#define CRYPTO_BLOCK_SIZE 4096
+#define CRYPTO_BLOCK_SIZE 64//4096
 #define CRYPTO_BLOCK_MASK ~(unsigned long long)(CRYPTO_BLOCK_SIZE - 1)
 #define CRYPTO_ADR_TO_BASE(adr) ((uint64_t)adr & CRYPTO_BLOCK_MASK)
 

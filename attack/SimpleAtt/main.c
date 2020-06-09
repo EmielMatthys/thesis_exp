@@ -17,13 +17,13 @@ asm("    .data\n"
     "    .space 0x1000\n");
 
 void check_var(void*);
-extern int a,b,c;
+extern __uint64_t a, b,c;
 
 void attack_var(void* var)
 {
 
     _YELLOW info("ATTACKING variable at %p", var);
-    _RESET_COL
+    _RESET_COL  
 
     // Grant read and write for attacked var
     ASSERT(!mprotect(PAGE_BASEADR(var), 4096, PROT_WRITE | PROT_READ));
@@ -37,16 +37,16 @@ void attack_var(void* var)
 
 int main()
 {
-    a = 5;
-    b = 0x1122;
-    c = 6;
+//    a = 5;
+//    b = 0x1122;
+//    c = 6;
 
     tem_init_mem_encr(&a, 1); // Encrypt given blocks
     ASSERT(!mprotect(&a, 4096, PROT_NONE)); // Remove access
 
     a = 0;
-    b = 0x1122;
-    c = 6;
+    b = 0x6867666564636261;
+    c = 0x706f6e6d6c6b6a69;
 
     check_var(&a); // var still false
 

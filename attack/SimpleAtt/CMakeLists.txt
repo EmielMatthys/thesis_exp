@@ -1,1 +1,1 @@
-add_executable(simple_attack main.c)
+add_executable(simple_attack main.c ../../common/debug.c)
